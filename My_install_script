@@ -1,0 +1,114 @@
+#!/bin/bash
+
+# Arch Linux Install - Мой скрипт быстрой установки Arch Linux
+
+loadkeys ru
+setfont cyr-sun16
+
+echo 'Синхронизация системных часов'
+timedatectl set-ntp true 
+
+echo 'Создание разделов BOOT, ROOT, SWAP, HOME'
+fdisk /dev/sda
+
+# Раздел BOOT 
+echo n;
+echo ;
+echo ;
+echo +500M -a;
+echo y;
+echo t;
+echo 1;
+
+# Раздел ROOT 
+echo n;
+echo ;
+echo ;
+echo +40G;
+echo y;
+echo t;
+echo i;
+
+# Раздел Swap 
+echo n;
+echo ;
+echo ;
+echo +4G;
+echo y;
+echo t;
+
+# Раздел HOME 
+echo n;
+echo ;
+echo ;
+echo ;
+echo y;
+echo t;
+echo i;
+
+echo w;
+
+echo 'Ваша разметка диска'
+fdisk -l
+
+# Форматирование разделов и присвоение LABEL каждому из них
+
+mkfs.fat -F32 /dev/sda1 -L boot
+mkfs.ext4  /dev/sda2 -L root
+mkswap  /dev/sda3 -L swap
+mkfs.ext4  /dev/sda4 -L home
+
+# Монтируем диски
+mount /dev/sda2 /mnt
+mkdir /mnt/home
+mkdir /mnt/boot
+mount /dev/sda1 /mnt/boot
+mount /dev/sda4 /mnt/home
+swapon /dev/sda3
+
+# Установка системы и основных пакетов
+
+pacstrap -K /mnt base base-devel linux linux-firmware nano netctl dhcpcd
+
+# Генерируем fstab
+genfstab -U /mnt >> /mnt/etc/fstab
+
+# Переходим в установленную систему
+arch-chroot /mnt
+
+# Часовой пояс
+ln -sf /usr/share/zoneinfo/Asia/Omsk /etc/localtime
+
+hwclock --systohc
+
+# Имя компьютера
+echo "ArchLinux" > /etc/hostname
+
+# Добавляем русскую локаль системы
+echo "en_US.UTF-8 UTF-8" > /etc/locale.gen
+echo "ru_RU.UTF-8 UTF-8" >> /etc/locale.gen 
+
+# Обновим текущую локаль системы
+locale-gen
+
+# Язык системы 
+echo 'Указываем язык системы'
+echo 'LANG="ru_RU.UTF-8"' > /etc/locale.conf
+
+# Вписываем KEYMAP=ru FONT=cyr-sun16
+echo 'KEYMAP=ru' >> /etc/vconsole.conf
+echo 'FONT=cyr-sun16' >> /etc/vconsole.conf
+
+# Создание нового образа initramfs
+mkinitcpio -P
+
+# Пароль root
+passwd
+echo satriani;
+echo satriani;
+
+# Установка загрузчика
+bootctl install
+
+
+
